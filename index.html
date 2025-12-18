@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>My Terminal Site</title>
+  <title>decyphered</title>
   <style>
     :root { color-scheme: dark; }
     body {
@@ -15,36 +15,119 @@
       display: grid;
       place-items: center;
     }
-    .screen {
-      width: min(820px, 92vw);
-      padding: 28px;
-      line-height: 1.6;
+    .terminal {
+      width: min(900px, 92vw);
+      padding: 24px;
+      line-height: 1.55;
       font-size: 16px;
-      white-space: pre-wrap;
     }
-    .cursor {
-      display: inline-block;
-      width: 10px;
-      animation: blink 1s steps(1) infinite;
+    .output { white-space: pre-wrap; }
+    .prompt-line {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      margin-top: 10px;
     }
-    @keyframes blink { 50% { opacity: 0; } }
+    .prompt { white-space: nowrap; }
+    input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: inherit;
+      font: inherit;
+      padding: 0;
+    }
     a { color: inherit; text-decoration: underline; }
+    .dim { opacity: 0.75; }
   </style>
 </head>
 <body>
-  <main class="screen">
-$ whoami
-Christina
+  <main class="terminal" role="application" aria-label="Terminal">
+    <div class="output" id="out"></div>
 
-$ ls
-about.txt   links.txt
+    <div class="prompt-line">
+      <div class="prompt" id="prompt">$</div>
+      <input id="cmd" type="text" autocomplete="off" spellcheck="false" autofocus />
+    </div>
 
-$ cat about.txt
-Minimal site. Max signal.
-
-$ cat links.txt
-- <a href="https://github.com/decyphered">github</a>
-  <span class="cursor">▉</span>
+    <div class="dim" style="margin-top:10px;">Type <b>help</b>.</div>
   </main>
+
+  <script>
+    const out = document.getElementById("out");
+    const cmd = document.getElementById("cmd");
+
+    function print(text = "") {
+      out.textContent += text + "\n";
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function loadTextFile(path) {
+      const res = await fetch(path, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`Could not load ${path} (${res.status})`);
+      return await res.text();
+    }
+
+    async function runCommand(raw) {
+      const input = raw.trim();
+      if (!input) return;
+
+      // Echo what the user typed (terminal style)
+      print(`$ ${input}`);
+
+      const [command, ...args] = input.split(/\s+/);
+      const c = command.toLowerCase();
+
+      if (c === "help") {
+        print(
+`commands:
+  help        show this list
+  whoami      display identity
+  about       show about.txt
+  clear       clear the screen`
+        );
+        return;
+      }
+
+      if (c === "clear") {
+        out.textContent = "";
+        return;
+      }
+
+      if (c === "whoami") {
+        print("cyphers");
+        return;
+      }
+
+      if (c === "about") {
+        try {
+          const text = await loadTextFile("about.txt");
+          print(text.trimEnd());
+        } catch (e) {
+          print(`error: ${e.message}`);
+        }
+        return;
+      }
+
+      print(`command not found: ${command}`);
+    }
+
+    cmd.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        const value = cmd.value;
+        cmd.value = "";
+        await runCommand(value);
+      }
+    });
+
+    // optional: click anywhere focuses input
+    document.addEventListener("click", () => cmd.focus());
+
+    // boot text
+    print("decyphered.tech");
+    print("-------------");
+    print("ready.");
+  </script>
 </body>
 </html>
